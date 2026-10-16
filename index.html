@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Barnabas — Anger Games</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          blood: {
+            50:  '#fff1f1',
+            100: '#ffdddd',
+            200: '#ffbdbd',
+            300: '#ff8a8a',
+            400: '#ff4d4d',
+            500: '#e60000',
+            600: '#b80000',
+            700: '#8a0000',
+            800: '#5c0000',
+            900: '#2e0000',
+          },
+          ink: {
+            900: '#0a0000',
+            800: '#120000',
+            700: '#1a0505',
+          }
+        },
+        fontFamily: {
+          horror: ['"Creepster"', 'cursive'],
+          body: ['"Inter"', 'system-ui', 'sans-serif'],
+        },
+        animation: {
+          'drip': 'drip 6s ease-in infinite',
+          'pulse-red': 'pulseRed 3s ease-in-out infinite',
+          'flicker': 'flicker 4s linear infinite',
+          'bloodfall': 'bloodfall 8s linear infinite',
+        },
+        keyframes: {
+          drip: {
+            '0%':   { transform: 'translateY(-10px)', opacity: '0' },
+            '10%':  { opacity: '1' },
+            '100%': { transform: 'translateY(100vh)', opacity: '0' },
+          },
+          pulseRed: {
+            '0%, 100%': { textShadow: '0 0 8px #e60000, 0 0 20px #8a0000' },
+            '50%':      { textShadow: '0 0 20px #ff0000, 0 0 40px #b80000' },
+          },
+          flicker: {
+            '0%, 18%, 22%, 25%, 53%, 57%, 100%': { opacity: '1' },
+            '20%, 24%, 55%': { opacity: '0.6' },
+          },
+          bloodfall: {
+            '0%':   { transform: 'translateY(-100%)' },
+            '100%': { transform: 'translateY(100%)' },
+          },
+        },
+      },
+    },
+  };
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  html, body {
+    background: #0a0000;
+    color: #fff;
+    overscroll-behavior: none;
+  }
+
+  /* ---- Blood canvas background ---- */
+  #bloodCanvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ---- Vignette + grain ---- */
+  .vignette::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background:
+      radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%),
+      repeating-linear-gradient(0deg, rgba(255,0,0,0.03) 0px, rgba(255,0,0,0.03) 1px, transparent 1px, transparent 3px);
+  }
+
+  /* ---- Glass card ---- */
+  .blood-card {
+    background: linear-gradient(160deg, rgba(30,0,0,0.85), rgba(10,0,0,0.95));
+    border: 1px solid rgba(230, 0, 0, 0.35);
+    box-shadow:
+      0 0 30px rgba(230, 0, 0, 0.15),
+      inset 0 0 40px rgba(230, 0, 0, 0.05);
+    backdrop-filter: blur(8px);
+  }
+
+  .blood-card:hover {
+    border-color: rgba(255, 40, 40, 0.75);
+    box-shadow:
+      0 0 45px rgba(230, 0, 0, 0.4),
+      inset 0 0 60px rgba(230, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .blood-btn {
+    background: linear-gradient(180deg, #b80000, #5c0000);
+    border: 1px solid #ff4d4d;
+    box-shadow: 0 0 20px rgba(230, 0, 0, 0.6), inset 0 0 15px rgba(0,0,0,0.5);
+    transition: all .2s ease;
+  }
+  .blood-btn:hover {
+    background: linear-gradient(180deg, #e60000, #8a0000);
+    box-shadow: 0 0 35px rgba(255, 0, 0, 0.9), inset 0 0 20px rgba(0,0,0,0.6);
+    transform: scale(1.02);
+  }
+
+  /* Title drip */
+  .drip-title {
+    position: relative;
+    display: inline-block;
+  }
+  .drip-title::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -8px;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #e60000, transparent);
+    filter: blur(2px);
+  }
+</style>
+</head>
+
+<body class="font-body min-h-screen vignette">
+
+  <!-- Blood flow background -->
+  <canvas id="bloodCanvas"></canvas>
+
+  <!-- ================= MAIN ================= -->
+  <main class="relative z-10 px-5 pt-8 pb-16 max-w-md mx-auto">
+
+    <!-- ============ HEADER ============ -->
+    <header class="text-center mb-10 animate-flicker">
+      <p class="text-blood-500 text-xs tracking-[0.5em] uppercase mb-2 opacity-80">
+        Enter the cage
+      </p>
+      <h1 class="font-horror text-5xl md:text-6xl text-blood-500 animate-pulse-red drip-title">
+        BARNABAS
+      </h1>
+      <p class="text-blood-300/60 text-sm mt-6 italic">
+        Anger Games · Joker's Playground
+      </p>
+    </header>
+
+    <!-- ============ HERO BANNER ============ -->
+    <section class="blood-card rounded-2xl overflow-hidden mb-8 transition-all duration-300">
+      <img
+        src="https://raw.githubusercontent.com/iappspro/githubclient/refs/heads/main/botfiles/ChatGPT%20Image%20Oct%2016%2C%202026%2C%2005_36_57%20AM.png"
+        alt="Barnabas"
+        class="w-full h-56 object-cover opacity-90"
+        onerror="this.style.display='none'"
+      />
+      <div class="p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="flame" class="w-5 h-5 text-blood-500"></i>
+          <h2 class="text-blood-400 font-semibold tracking-wider uppercase text-sm">
+            Rage Cage
+          </h2>
+          <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-blood-700/50 border border-blood-500/60 text-blood-200">
+            LIVE
+          </span>
+        </div>
+        <p class="text-blood-100/70 text-sm leading-relaxed mb-5">
+          Step into the cage. No exit until the rage is spent. Survive the waves, feed the fury, and leave legend.
+        </p>
+        <button
+          onclick="launchGame('ragecage')"
+          class="blood-btn w-full rounded-xl py-3 text-white font-bold tracking-widest uppercase flex items-center justify-center gap-2"
+        >
+          <i data-lucide="swords" class="w-5 h-5"></i>
+          Play Now
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ GAME GRID ============ -->
+    <section class="mb-8">
+      <h3 class="text-blood-300/80 text-xs tracking-[0.3em] uppercase mb-4 flex items-center gap-2">
+        <i data-lucide="skull" class="w-4 h-4 text-blood-500"></i>
+        Anger Games
+      </h3>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="launchGame('ragecage')"
+          class="blood-card rounded-xl p-4 text-left transition-all duration-300 group">
+          <i data-lucide="flame" class="w-7 h-7 text-blood-500 mb-2 group-hover:scale-110 transition-transform"></i>
+          <p class="text-white font-semibold text-sm">Rage Cage</p>
+          <p class="text-blood-300/50 text-xs mt-1">Survive the fury</p>
+        </button>
+
+        <button onclick="comingSoon()"
+          class="blood-card rounded-xl p-4 text-left transition-all duration-300 group opacity-70">
+          <i data-lucide="zap" class="w-7 h-7 text-blood-500 mb-2 group-hover:scale-110 transition-transform"></i>
+          <p class="text-white font-semibold text-sm">Wrath Circuit</p>
+          <p class="text-blood-300/50 text-xs mt-1">Coming soon</p>
+        </button>
+
+        <button onclick="comingSoon()"
+          class="blood-card rounded-xl p-4 text-left transition-all duration-300 group opacity-70">
+          <i data-lucide="ghost" class="w-7 h-7 text-blood-500 mb-2 group-hover:scale-110 transition-transform"></i>
+          <p class="text-white font-semibold text-sm">Berserk Protocol</p>
+          <p class="text-blood-300/50 text-xs mt-1">Coming soon</p>
+        </button>
+
+        <button onclick="comingSoon()"
+          class="blood-card rounded-xl p-4 text-left transition-all duration-300 group opacity-70">
+          <i data-lucide="target" class="w-7 h-7 text-blood-500 mb-2 group-hover:scale-110 transition-transform"></i>
+          <p class="text-white font-semibold text-sm">Final Outburst</p>
+          <p class="text-blood-300/50 text-xs mt-1">Coming soon</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ QUICK ACTIONS ============ -->
+    <section class="mb-8">
+      <h3 class="text-blood-300/80 text-xs tracking-[0.3em] uppercase mb-4 flex items-center gap-2">
+        <i data-lucide="menu" class="w-4 h-4 text-blood-500"></i>
+        Quick Actions
+      </h3>
+
+      <div class="space-y-2">
+        <button onclick="openTg('https://t.me/barnabbot')"
+          class="blood-card w-full rounded-xl px-4 py-3 flex items-center gap-3 transition-all duration-300">
+          <i data-lucide="user" class="w-5 h-5 text-blood-400"></i>
+          <span class="text-sm text-white">My Profile</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-blood-500 ml-auto"></i>
+        </button>
+
+        <button onclick="openTg('https://t.me/barnabbot')"
+          class="blood-card w-full rounded-xl px-4 py-3 flex items-center gap-3 transition-all duration-300">
+          <i data-lucide="trophy" class="w-5 h-5 text-blood-400"></i>
+          <span class="text-sm text-white">Leaderboard</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-blood-500 ml-auto"></i>
+        </button>
+
+        <button onclick="openTg('https://t.me/barnabbot')"
+          class="blood-card w-full rounded-xl px-4 py-3 flex items-center gap-3 transition-all duration-300">
+          <i data-lucide="gift" class="w-5 h-5 text-blood-400"></i>
+          <span class="text-sm text-white">Daily Reward</span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-blood-500 ml-auto"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ DONATE ============ -->
+    <section class="mb-8">
+      <button onclick="openTg('https://t.me/barnabbot')"
+        class="w-full rounded-2xl p-5 border border-blood-500/60 bg-gradient-to-br from-blood-800/60 to-ink-900 flex items-center gap-4 hover:border-blood-400 transition-all">
+        <i data-lucide="heart" class="w-8 h-8 text-blood-500"></i>
+        <div class="text-left">
+          <p class="text-white font-bold text-sm uppercase tracking-wider">Donate</p>
+          <p class="text-blood-200/60 text-xs">Keep Barnabas free</p>
+        </div>
+        <i data-lucide="arrow-up-right" class="w-5 h-5 text-blood-500 ml-auto"></i>
+      </button>
+    </section>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="text-center pt-6 border-t border-blood-800/40">
+      <p class="text-blood-300/40 text-xs italic">
+        Barnabas is watching. He always is.
+      </p>
+      <p class="text-blood-700/60 text-[10px] mt-3 tracking-widest uppercase">
+        Jokers Play · No Mercy
+      </p>
+    </footer>
+
+  </main>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script>
+    // ---- Telegram WebApp init ----
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor('#0a0000');
+      tg.setBackgroundColor('#0a0000');
+    }
+
+    // ---- Lucide icons ----
+    lucide.createIcons();
+
+    // ---- Action helpers ----
+    function launchGame(name) {
+      if (tg) {
+        tg.showAlert(`Launching ${name}…`);
+      }
+      // If your game is embedded in the webapp itself, redirect instead:
+      // window.location.href = `./games/${name}/index.html`;
+    }
+
+    function comingSoon() {
+      if (tg) tg.showAlert('This game is not yet unleashed.');
+    }
+
+    function openTg(url) {
+      if (tg) {
+        tg.openTelegramLink(url);
+      } else {
+        window.open(url, '_blank');
+      }
+    }
+  </script>
+
+  <!-- ============ BLOOD FLOW ANIMATION ============ -->
+  <script>
+    (function bloodFlow() {
+      const canvas = document.getElementById('bloodCanvas');
+      const ctx = canvas.getContext('2d');
+      let w, h;
+      let drops = [];
+
+      function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      // Drip streaks
+      class Streak {
+        constructor() { this.reset(true); }
+        reset(initial = false) {
+          this.x = Math.random() * w;
+          this.y = initial ? Math.random() * h : -Math.random() * 300;
+          this.len = 40 + Math.random() * 180;
+          this.speed = 0.4 + Math.random() * 1.8;
+          this.width = 1 + Math.random() * 3;
+          this.alpha = 0.08 + Math.random() * 0.25;
+          this.hue = 0 + Math.random() * 10;
+        }
+        update() {
+          this.y += this.speed;
+          if (this.y - this.len > h) this.reset();
+        }
+        draw() {
+          const grad = ctx.createLinearGradient(this.x, this.y - this.len, this.x, this.y);
+          grad.addColorStop(0, `hsla(${this.hue}, 100%, 20%, 0)`);
+          grad.addColorStop(0.6, `hsla(${this.hue}, 100%, 35%, ${this.alpha})`);
+          grad.addColorStop(1, `hsla(${this.hue}, 100%, 55%, ${this.alpha + 0.1})`);
+
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = this.width;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(this.x, this.y - this.len);
+          ctx.lineTo(this.x, this.y);
+          ctx.stroke();
+
+          // droplet tip
+          ctx.fillStyle = `hsla(${this.hue}, 100%, 45%, ${this.alpha + 0.15})`;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.width * 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Slow pools
+      class Pool {
+        constructor() { this.reset(true); }
+        reset(initial = false) {
+          this.x = Math.random() * w;
+          this.y = initial ? Math.random() * h : h + Math.random() * 100;
+          this.r = 30 + Math.random() * 90;
+          this.speed = 0.05 + Math.random() * 0.25;
+          this.alpha = 0.03 + Math.random() * 0.08;
+        }
+        update() {
+          this.y -= this.speed;
+          this.r += 0.05;
+          if (this.y + this.r < -50) this.reset();
+        }
+        draw() {
+          const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r);
+          grad.addColorStop(0, `rgba(180, 0, 0, ${this.alpha})`);
+          grad.addColorStop(1, 'rgba(180, 0, 0, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      const streaks = Array.from({ length: 45 }, () => new Streak());
+      const pools   = Array.from({ length: 10 }, () => new Pool());
+
+      function loop() {
+        ctx.clearRect(0, 0, w, h);
+
+        // fade trail for smear effect
+        ctx.fillStyle = 'rgba(10, 0, 0, 0.18)';
+        ctx.fillRect(0, 0, w, h);
+
+        pools.forEach(p => { p.update(); p.draw(); });
+        streaks.forEach(s => { s.update(); s.draw(); });
+
+        requestAnimationFrame(loop);
+      }
+      loop();
+    })();
+  </script>
+
+</body>
+</html>
